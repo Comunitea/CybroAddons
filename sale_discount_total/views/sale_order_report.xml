@@ -5,7 +5,7 @@
 
              <xpath expr="//div[@class='col-xs-4 pull-right']/table/tr[2]" position="after">
                     <!--<t t-if="o.discount_rate">-->
-                    <tr>
+                    <tr t-if="o.discount_rate">
                         <td>Discount</td>
                         <td class="text-right">
                             <span t-field="o.amount_discount" t-field-options='{"widget": "monetary", "display_currency": "o.currency_id"}'/>

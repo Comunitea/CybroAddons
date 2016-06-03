@@ -3,13 +3,13 @@ from openerp.osv import osv
 import openerp.addons.decimal_precision as dp
 
 
-class AccountInvoiceLine(models.Model):
-    _inherit = "account.invoice.line"
+# class AccountInvoiceLine(models.Model):
+#     _inherit = "account.invoice.line"
 
-    discount = fields.Float(string='Discount (%)',
-                            digits=(16, 10),
-                            # digits= dp.get_precision('Discount'),
-                            default=0.0)
+#     discount = fields.Float(string='Discount (%)',
+#                             digits=(16, 2),
+#                             # digits= dp.get_precision('Discount'),
+#                             default=0.0)
 
 class AccountInvoice(models.Model):
     _inherit = "account.invoice"

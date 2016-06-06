@@ -6,26 +6,21 @@ import openerp.addons.decimal_precision as dp
 class SaleOrder(osv.Model):
     _inherit = 'sale.order'
 
+    def _amount_all_wrapper(self, cr, uid, ids, field_name, arg, context=None):
+        """ Wrapper because of direct method passing as parameter for function fields """
+        return self._amount_all(cr, uid, ids, field_name, arg, context=context)
+
     def _amount_all(self, cr, uid, ids, field_name, arg, context=None):
         cur_obj = self.pool.get('res.currency')
-        res = {}
+        res = super(SaleOrder, self)._amount_all(cr, uid, ids, field_name, arg, context)
         for order in self.browse(cr, uid, ids, context=context):
-            res[order.id] = {
-                'amount_untaxed': 0.0,
-                'amount_discount': 0.0,
-                'amount_tax': 0.0,
-                'amount_total': 0.0,
-            }
+            res[order.id]['amount_discount'] = 0.0
             cur = order.pricelist_id.currency_id
-            val1 = val2 = val3 = 0.0
+            discount = 0.0
             for line in order.order_line:
-                val1 += line.price_subtotal
-                val2 += self._amount_line_tax(cr, uid, line, context=context)
-                val3 += (line.product_uom_qty * line.price_unit) * line.discount / 100
-            res[order.id]['amount_untaxed'] = round(cur_obj.round(cr, uid, cur, val1))
-            res[order.id]['amount_tax'] = round(cur_obj.round(cr, uid, cur, val2))
-            res[order.id]['amount_discount'] = round(cur_obj.round(cr, uid, cur, val3))
-            res[order.id]['amount_total'] = round(res[order.id]['amount_untaxed'] + res[order.id]['amount_tax'])
+                discount += (line.product_uom_qty * line.price_unit) * line.discount / 100
+
+            res[order.id]['amount_discount'] = cur_obj.round(cr, uid, cur, discount)
         return res
 
     def _get_order(self, cr, uid, ids, context=None):
@@ -41,15 +36,12 @@ class SaleOrder(osv.Model):
         'discount_rate': fields.float('Discount Rate', digits_compute=dp.get_precision('Account'),
                                       readonly=True,
                                       states={'draft': [('readonly', False)], 'sent': [('readonly', False)]}, ),
-        'amount_discount': fields.function(_amount_all, digits_compute=dp.get_precision('Account'), string='Discount',
-                                           multi='sums', store=True, help="The total discount."),
-        'amount_untaxed': fields.function(_amount_all, digits_compute=dp.get_precision('Account'),
-                                          string='Untaxed Amount',
-                                          multi='sums', store=True, help="The amount without tax.", track_visibility='always'),
-        'amount_tax': fields.function(_amount_all, digits_compute=dp.get_precision('Account'), string='Taxes',
-                                      multi='sums', store=True, help="The tax amount."),
-        'amount_total': fields.function(_amount_all, digits_compute=dp.get_precision('Account'), string='Total',
-                                        multi='sums', store=True, help="The total amount."),
+
+        'amount_discount': fields.function(_amount_all_wrapper, digits_compute=dp.get_precision('Account'), string='Discount',
+                                           multi='sums', store={
+                'sale.order': (lambda self, cr, uid, ids, c={}: ids, ['order_line'], 10),
+                'sale.order.line': (_get_order, ['price_unit', 'tax_id', 'discount', 'product_uom_qty'], 10),
+            }, help="The total discount."),
     }
 
     _defaults = {
